@@ -2,43 +2,6 @@ function wait(ms){
     return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-function load_btn_play(e) {
-    const btnPlay_observer = new MutationObserver((mutationsList, observer) => {
-        const btnPlay = document.getElementsByClassName("btnPlay")[0];
-
-        if (btnPlay) {
-            observer.disconnect();
-            add_el_to_btn(btnPlay);
-        }
-    });
-
-    btnPlay_observer.observe(document.body, {childList: true, subtree: true});
-}
-
-
-async function add_el_to_btn(btnPlay) {
-    btnPlay.addEventListener('click', async function() {
-        const spinner = document.getElementsByClassName("mdl-spinner")[0];
-
-        const spinnerObserver = new MutationObserver(async (mutationsList, observer) => {
-            for (let mutation of mutationsList) {
-                if (mutation.attributeName === "class") {
-                    if (!spinner.classList.contains("spinnerMdlActive")) {                        
-    
-                        observer.disconnect(); // Stop observing after the class is removed
-                        
-                        await wait(2000); // Pause for 2 seconds
-
-                        add_new_btn_next_to_sub();
-                    }
-                }
-            }
-        });
-
-        spinnerObserver.observe(spinner, { attributes: true, attributeFilter: ["class"] });
-    });
-}
-
 function add_new_btn_next_to_sub(){
     if (document.getElementById("btnToggleOffset")){
         return;
@@ -49,8 +12,12 @@ function add_new_btn_next_to_sub(){
     console.log(subtitles_btn)
 
 
-    const offsetBtnHTML = `<button id="btnToggleOffset" is="paper-icon-button-light" class="btnSubtitles autoSize paper-icon-button-light" title="Subtitles"> 
-                                <span class="xlargePaperIconButton material-icons closed_caption" aria-hidden="true"></span> 
+    const offsetBtnHTML = `<button id="btnToggleOffset" is="paper-icon-button-light" class="btnSubtitles autoSize paper-icon-button-light" title="Toggle Sub Offset"> 
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <path d="M12 2C8.13 2 5 5.13 5 9C5 12.87 8.13 16 12 16C15.87 16 19 12.87 19 9C19 5.13 15.87 2 12 2ZM12 14C9.24 14 7 11.76 7 9C7 6.24 9.24 4 12 4C14.76 4 17 6.24 17 9C17 11.76 14.76 14 12 14Z" fill="currentColor"/>
+                                    <path d="M12 6V9L14 11" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                    <path d="M8 18H16" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                </svg>
                             </button>`;
     subtitles_btn.insertAdjacentHTML('afterend', offsetBtnHTML);
 
@@ -58,7 +25,7 @@ function add_new_btn_next_to_sub(){
 
     console.log(toggle_btn)
 
-    toggle_btn.addEventListener("click", function() {    
+    toggle_btn.addEventListener("click", function() {
         const val1 = 0;
         const val2 = 5.8;
         
@@ -83,7 +50,6 @@ function add_new_btn_next_to_sub(){
 }
 
 function checkUrlAndTrigger() {
-    console.log("GAGA")
     if (window.location.href.includes("#/video")) {
         if (document.readyState === "loading") {
             // DOM is still loading, wait for DOMContentLoaded
