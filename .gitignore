@@ -14,3 +14,5 @@ docker/dist
 /.cursor
 
 *.sh
+
+scripts/
