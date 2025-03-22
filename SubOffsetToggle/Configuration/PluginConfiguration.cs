@@ -15,6 +15,7 @@ public class PluginConfiguration : BasePluginConfiguration
         // set default options here
         Offset1 = 0;
         Offset2 = 0;
+        IndexDir = "/usr/share/jellyfin/web/";
     }
 
     /// <summary>
@@ -26,4 +27,9 @@ public class PluginConfiguration : BasePluginConfiguration
     /// Gets or sets the second offset.
     /// </summary>
     public float Offset2 { get; set; }
+
+    /// <summary>
+    /// Gets or sets the directory where index.html is stored.
+    /// </summary>
+    public string IndexDir { get; set; }
 }

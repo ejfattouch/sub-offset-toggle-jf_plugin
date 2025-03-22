@@ -10,14 +10,19 @@
             <div class="content-primary">
                 <form id="TemplateConfigForm">
                     <div class="inputContainer">
-                        <label class="inputLabel inputLabelUnfocused" for="AnInteger">Offset 1</label>
+                        <label class="inputLabel inputLabelUnfocused" for="Offset1">Offset 1</label>
                         <input id="Offset1" step=".1" type="number" is="emby-input" min="-30" max="30" required/>
                         <div class="fieldDescription">In seconds. Min: -30s, Max: 30s</div>
                     </div>
                     <div class="inputContainer">
-                        <label class="inputLabel inputLabelUnfocused" for="AnInteger">Offset 2</label>
+                        <label class="inputLabel inputLabelUnfocused" for="Offset2">Offset 2</label>
                         <input id="Offset2" step=".1" type="number" is="emby-input" min="-30" max="30" required/>
                         <div class="fieldDescription">In seconds. Min: -30s, Max: 30s</div>
+                    </div>
+                    <div class="inputContainer">
+                        <label class="inputLabel inputLabelUnfocused" for="IndexDir">Web server index.html directory</label>
+                        <input id="IndexDir" name="AString" type="text" is="emby-input" />
+                        <div class="fieldDescription">Warning, index.html must be on the same server as the Jellyfin backend.</div>
                     </div>
                     <div>
                         <button is="emby-button" type="submit" class="raised button-submit block emby-button">
@@ -38,6 +43,7 @@
                     ApiClient.getPluginConfiguration(TemplateConfig.pluginUniqueId).then(function (config) {
                         document.querySelector('#Offset1').value = config.Offset1;
                         document.querySelector('#Offset2').value = config.Offset2;
+                        document.querySelector('#IndexDir').value = config.IndexDir;
                         Dashboard.hideLoadingMsg();
                     });
                 });
@@ -48,6 +54,7 @@
                 ApiClient.getPluginConfiguration(TemplateConfig.pluginUniqueId).then(function (config) {
                     config.Offset1 = document.querySelector('#Offset1').value;
                     config.Offset2 = document.querySelector('#Offset2').value;
+                    config.IndexDir = document.querySelector('#IndexDir').value;
                     ApiClient.updatePluginConfiguration(TemplateConfig.pluginUniqueId, config).then(function (result) {
                         Dashboard.processPluginConfigurationUpdateResult(result);
                     });
