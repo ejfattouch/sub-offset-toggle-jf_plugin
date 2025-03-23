@@ -1,5 +1,6 @@
 bin/
 obj/
+publish/
 BenchmarkDotNet.Artifacts/
 /package/
 
