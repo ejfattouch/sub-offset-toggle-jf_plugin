@@ -8,6 +8,7 @@
     <div id="TemplateConfigPage" data-role="page" class="page type-interior pluginConfigurationPage" data-require="emby-input,emby-button,emby-select,emby-checkbox">
         <div data-role="content">
             <div class="content-primary">
+                <h1>Subtitle Offset Toggle</h1>
                 <form id="TemplateConfigForm">
                     <div class="inputContainer">
                         <label class="inputLabel inputLabelUnfocused" for="Offset1">Offset 1</label>
@@ -22,17 +23,23 @@
                     <div class="inputContainer">
                         <label class="inputLabel inputLabelUnfocused" for="IndexDir">Web server index.html directory</label>
                         <input id="IndexDir" name="AString" type="text" is="emby-input" />
-                        <div class="fieldDescription">Warning, index.html must be on the same server as the Jellyfin backend.</div>
+                        <div class="fieldDescription">Warning! <code style="color: var(--activeColorAlpha);">index.html</code> must be on the same server as the Jellyfin backend. 
+                            This directory needs to have Read and Write permissions for all users, equivalent of <code style="color: var(--activeColorAlpha);">chmod 766</code> in linux.
+                        </div>
                     </div>
                     <div>
                         <button is="emby-button" type="submit" class="raised button-submit block emby-button">
                             <span>Save</span>
                         </button>
+                        <label class="inputLabel">
+                            If this is your first time launching the plugin, please refresh the page and close any existing sessions.
+                            If this is not your first time, simply refresh the page after the settings are saved.
+                        </label>
                     </div>
                 </form>
             </div>
         </div>
-        <script type="text/javascript">
+        <script type="text/javascript"> // This script logic can be used inside of the dom instead of templating in the future
             var TemplateConfig = {
                 pluginUniqueId: '22d7e486-c0e3-4849-98ed-a9e64601cbda'
             };
@@ -50,17 +57,26 @@
 
             document.querySelector('#TemplateConfigForm')
                 .addEventListener('submit', function(e) {
+                e.preventDefault();
                 Dashboard.showLoadingMsg();
+
                 ApiClient.getPluginConfiguration(TemplateConfig.pluginUniqueId).then(function (config) {
                     config.Offset1 = document.querySelector('#Offset1').value;
                     config.Offset2 = document.querySelector('#Offset2').value;
                     config.IndexDir = document.querySelector('#IndexDir').value;
                     ApiClient.updatePluginConfiguration(TemplateConfig.pluginUniqueId, config).then(function (result) {
-                        Dashboard.processPluginConfigurationUpdateResult(result);
+                        return ApiClient.getPluginConfiguration(TemplateConfig.pluginUniqueId);
+                    }).then(function(updatedConfig){
+                        if (updatedConfig.InvalidDirectory) {
+                            Dashboard.processErrorResponse({statusText: `Request failed - The directory provided is not a valid web directory. (missing index.html)`});
+                        }
+                        else {
+                            Dashboard.processPluginConfigurationUpdateResult();
+                        }
+                        Dashboard.hideLoadingMsg();
                     });
                 });
 
-                e.preventDefault();
                 return false;
             });
         </script>

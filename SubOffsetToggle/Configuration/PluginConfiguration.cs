@@ -32,4 +32,9 @@ public class PluginConfiguration : BasePluginConfiguration
     /// Gets or sets the directory where index.html is stored.
     /// </summary>
     public string IndexDir { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the web directory is invalid.
+    /// </summary>
+    public bool InvalidDirectory { get; set; } = false;
 }
