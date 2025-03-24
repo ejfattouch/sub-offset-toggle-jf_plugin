@@ -18,6 +18,10 @@ namespace SubOffsetToggle;
 public class Plugin : BasePlugin<PluginConfiguration>, IHasWebPages
 {
     private readonly ILogger<Plugin> _logger;
+    private HtmlFileHandler? _fileHandler;
+    private DirectoryInfo indexDirectory;
+    private float _offset1;
+    private float _offset2;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="Plugin"/> class.
@@ -33,7 +37,23 @@ public class Plugin : BasePlugin<PluginConfiguration>, IHasWebPages
 
         Instance = this;
 
+        indexDirectory = new DirectoryInfo("/usr/share/jellyfin/web/");
+
+        _offset1 = _offset2 = 0;
+
+        try
+        {
+            _fileHandler = new HtmlFileHandler(indexDirectory);
+            UpdateIndexHTML();
+        }
+        catch (FileNotFoundException)
+        {
+            _fileHandler = null;
+        }
+
         ConfigurationChanged += OnConfigurationChanged;
+
+        _logger.LogInformation("Tried to create dir");
     }
 
     /// <inheritdoc />
@@ -55,10 +75,68 @@ public class Plugin : BasePlugin<PluginConfiguration>, IHasWebPages
     {
         _logger.LogInformation("OnConfigurationChanged has been called");
 
-        if (config is PluginConfiguration pluginConfiguration)
+        if (config is not PluginConfiguration)
         {
-            RenderJSInjectionTemplate(pluginConfiguration);
+            return;
         }
+
+        var pluginConfiguration = (PluginConfiguration)config;
+
+        DirectoryInfo newDir = new DirectoryInfo(pluginConfiguration.IndexDir);
+        // Check if index dir has changed
+        if (!indexDirectory.FullName.Equals(pluginConfiguration.IndexDir, StringComparison.Ordinal))
+        {
+            try
+            {
+                var newHandler = new HtmlFileHandler(newDir); // Exception would throw here
+                pluginConfiguration.InvalidDirectory = false;
+
+                // Cleanup old dir, run before changing filehandler and indexDir
+                RemoveIndexAndInject();
+
+                _fileHandler = newHandler;
+                indexDirectory = newDir;
+                RenderJSInjectionTemplate(pluginConfiguration);
+                UpdateIndexHTML();
+            }
+            catch (FileNotFoundException) // If index.html doesnt exist at new directory, reset the plugin conf to the previous one.
+            {
+                // Reset to old values
+                pluginConfiguration.IndexDir = indexDirectory.FullName;
+                pluginConfiguration.Offset1 = _offset1;
+                pluginConfiguration.Offset2 = _offset2;
+                pluginConfiguration.InvalidDirectory = true;
+                _logger.LogInformation("Sub Offset Plugin: Invalid directory for web server {NewDir}.", newDir.FullName);
+            }
+        }
+        else if (_fileHandler == null) // If dir hasnt changed and filehandler is still null
+        {
+            try
+            {
+                _fileHandler = new HtmlFileHandler(indexDirectory); // Exception would throw here
+                pluginConfiguration.InvalidDirectory = false;
+                UpdateIndexHTML();
+                RenderJSInjectionTemplate(pluginConfiguration);
+            }
+            catch (FileNotFoundException) // If index.html doesnt exist at new directory, reset the plugin conf to the previous one.
+            {
+                // Reset to old values
+                pluginConfiguration.InvalidDirectory = true;
+                _logger.LogInformation("Sub Offset Plugin: Invalid directory for web server {NewDir}.", newDir.FullName);
+            }
+        }
+        else // If dir hasnt changed
+        {
+            UpdateIndexHTML();
+            RenderJSInjectionTemplate(pluginConfiguration);
+            pluginConfiguration.InvalidDirectory = false;
+        }
+
+        // Update stored offsets
+        _offset1 = pluginConfiguration.Offset1;
+        _offset2 = pluginConfiguration.Offset2;
+
+        SaveConfiguration(); // SaveConfig doesnt trigger infinite recursive loop, updateconfig does
     }
 
     /// <inheritdoc />
@@ -69,7 +147,7 @@ public class Plugin : BasePlugin<PluginConfiguration>, IHasWebPages
             new PluginPageInfo
             {
                 Name = Name,
-                EmbeddedResourcePath = string.Format(CultureInfo.InvariantCulture, "{0}.Configuration.configPage.html", GetType().Namespace)
+                EmbeddedResourcePath = GetType().Namespace + ".Configuration.configPage.html"
             }
         ];
     }
@@ -77,11 +155,62 @@ public class Plugin : BasePlugin<PluginConfiguration>, IHasWebPages
     private void RenderJSInjectionTemplate(PluginConfiguration config)
     {
         _logger.LogInformation("RenderJSInjectionTemplate method has been called");
-        string web_dir = "/usr/share/jellyfin/web/";
-        string inject_dir = web_dir + "injection/";
 
-        FileInfo output = new FileInfo(inject_dir + "offset_btn_injection.js");
-        JSInjectionTemplater templater = new JSInjectionTemplater(output, _logger);
+        JSInjectionTemplater templater = new JSInjectionTemplater(indexDirectory, _logger);
         templater.ProcessInjectedJS(config.Offset1, config.Offset2);
+    }
+
+    private void UpdateIndexHTML()
+    {
+        if (_fileHandler is null)
+        {
+            return;
+        }
+
+        // Check if script tag exists
+        if (!_fileHandler.ScriptExists())
+        {
+            _fileHandler.AppendScriptToHead();
+            _fileHandler.SaveChanges();
+        }
+    }
+
+    private void RemoveIndexAndInject()
+    {
+        // Undo changes to index.html
+        if (_fileHandler != null)
+        {
+            _fileHandler.RemoveScript();
+            _fileHandler.SaveChanges();
+        }
+
+        try
+        {
+            // Remove injection dir
+            var dir = new DirectoryInfo(Path.Combine(indexDirectory.FullName, "injection/"));
+            if (dir.Exists)
+            {
+                foreach (var file in dir.EnumerateFiles())
+                {
+                    file.Delete();
+                }
+
+                dir.Delete();
+            }
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            _logger.LogError("Permission denied while deleting script: {Message}", ex.Message);
+        }
+        catch (IOException ex)
+        {
+            _logger.LogError("I/O error while deleting script: {Message}", ex.Message);
+        }
+    }
+
+    /// <inheritdoc />
+    public override void OnUninstalling()
+    {
+        RemoveIndexAndInject();
     }
 }

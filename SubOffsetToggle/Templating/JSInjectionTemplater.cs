@@ -9,6 +9,7 @@ namespace SubOffsetToggle.Templating
     /// </summary>
     public class JSInjectionTemplater
     {
+        private static readonly FileInfo TemplatePath = new FileInfo("/tmp/templates/inject_template.js");
         private readonly ILogger<Plugin> _logger;
         private readonly Templater _templater;
 
@@ -16,23 +17,31 @@ namespace SubOffsetToggle.Templating
         /// Initializes a new instance of the <see cref="JSInjectionTemplater"/> class.
         /// Requires an inject_template.js file present in the templates subdirectory of this class.
         /// </summary>
-        /// <param name="output">Output file.</param>
+        /// <param name="indexDir">Directory where the index.html used for this injection is located.</param>
         /// <param name="logger">Logger passed on from Plugin.</param>
-        public JSInjectionTemplater(FileInfo output, ILogger<Plugin> logger)
+        public JSInjectionTemplater(DirectoryInfo indexDir, ILogger<Plugin> logger)
         {
             _logger = logger;
             _logger.LogInformation("JSInjectionTemplater Constructor");
 
             string templateContent = ExtractTemplate();
-            SaveTemplateToFile(templateContent);
+            SaveTemplateToTempFile(templateContent);
 
-            FileInfo templatePath = new FileInfo("/tmp/templates/inject_template.js");
-            if (!templatePath.Exists)
+            if (!TemplatePath.Exists)
             {
                 throw new FileNotFoundException("/tmp/templates/inject_template.js was not supplied");
             }
 
-            _templater = new Templater(templatePath, output);
+            var injectionDir = new DirectoryInfo(indexDir.FullName + "injection/");
+            if (!injectionDir.Exists)
+            {
+                injectionDir.Create();
+            }
+
+            _logger.LogInformation("Index Dir {Id}", injectionDir.FullName);
+
+            FileInfo output = new FileInfo(Path.Combine(injectionDir.FullName, "offset_btn_injection.js"));
+            _templater = new Templater(TemplatePath, output);
         }
 
         /// <summary>
@@ -66,15 +75,12 @@ namespace SubOffsetToggle.Templating
         /// Processes the template and saves the rendered output.
         /// </summary>
         /// <param name="templateContent">String value of the contents of the template file.</param>
-        public void SaveTemplateToFile(string templateContent)
+        public void SaveTemplateToTempFile(string templateContent)
         {
             try
             {
-                // Define the output file path
-                string outputPath = "/tmp/templates/inject_template.js";
-
                 // Ensure the directory exists
-                string? directory = Path.GetDirectoryName(outputPath);
+                string? directory = Path.GetDirectoryName(TemplatePath.FullName);
 
                 if (directory is null)
                 {
@@ -87,9 +93,7 @@ namespace SubOffsetToggle.Templating
                 }
 
                 // Write the template content to the file
-                File.WriteAllText(outputPath, templateContent);
-
-                _logger.LogInformation("Template saved to {OutputPath}", outputPath);
+                File.WriteAllText(TemplatePath.FullName, templateContent);
             }
             catch (System.Exception ex)
             {

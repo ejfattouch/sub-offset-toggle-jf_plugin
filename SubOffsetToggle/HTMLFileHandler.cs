@@ -35,7 +35,7 @@ public class HtmlFileHandler
     /// Check for the existence of the script tag.
     /// </summary>
     /// <returns>If the script tag has been added to the index.html file.</returns>
-    public bool CheckForScriptExistence()
+    public bool ScriptExists()
     {
         return htmlDoc.DocumentNode.SelectSingleNode($"//*[@id='{ScriptID}']") != null;
     }
@@ -45,7 +45,7 @@ public class HtmlFileHandler
     /// </summary>
     public void AppendScriptToHead()
     {
-        if (CheckForScriptExistence())
+        if (ScriptExists())
         {
             Console.WriteLine("Warning: Script was already added to index.html, skipping");
             return;
@@ -75,7 +75,7 @@ public class HtmlFileHandler
     /// </summary>
     public void RemoveScript()
     {
-        if (CheckForScriptExistence())
+        if (ScriptExists())
         {
             var scriptNode = htmlDoc.DocumentNode.SelectSingleNode($"//*[@id='{ScriptID}']");
 
