@@ -29,16 +29,36 @@ function add_new_btn_next_to_sub(){
         const val1 = Number({{ offset_value_1 }});
         const val2 = Number({{ offset_value_2 }});
         
+        let uniqueVal;
+        let useUnique = false;
+
+        if (val1 === 0 || val2 === 0) {
+            useUnique = true;
+            singleVal = val1 === 0 ? val2 : val1;
+        }
+
         const offset_slider = document.getElementsByClassName("subtitleSyncSlider")[0];
 
         const storedVal = offset_slider.value*1;
         let newVal;
 
-        if (storedVal !== val1 && storedVal !== val2){
-            newVal = val1
+        // UseUnique is called if either val1 or val2 is equal to 0
+        // Behavior will be toggling between singleVal and 0
+        if (useUnique) {
+            newVal = storedVal === 0 ? uniqueVal : 0;
         }
-        else{
-            newVal = storedVal == val1 ? val2 : val1;
+        else { 
+            // Cycle val1 -> val2 -> 0 -> val1
+            // Default to 0 if storedVal is not val1 or val2
+            if (storedVal === val1) {
+                newVal = val2;
+            }
+            else if (storedVal === val2 || storedVal !== 0) {
+                newVal = 0;
+            }
+            else {
+                newVal = val1;
+            }
         }
         
         offset_slider.value = "" + newVal
