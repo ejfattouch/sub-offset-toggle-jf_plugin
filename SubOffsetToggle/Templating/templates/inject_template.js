@@ -1,16 +1,52 @@
-function wait(ms){
-    return new Promise(resolve => setTimeout(resolve, ms));
+function injectCSS() {
+    if (document.getElementById("subOffsetStyle")) {
+        return; // Prevent duplicate injection
+    }
+
+    const css = `
+    .subOffTglNotif {
+        position: absolute;
+        top: 10em;
+        width: 100%;
+        display: flex;
+        justify-content: center;
+        opacity: 0;
+        transition: opacity 0.3s ease-in-out;
+    }
+
+    .subOffTglNotif-content {
+        position: relative;
+        height: 3em;
+        border-radius: var(--largeRadius);
+        background-color: rgba(69, 69, 69, 0.69);
+        backdrop-filter: var(--blurDefault);
+        color: #fff;
+        width: 4em;
+        text-align: center;
+        line-height: 3em;
+        font-size: 20px;
+    }
+    
+    .show_toggle {
+        opacity: 1;
+    }`;
+
+    const style = document.createElement("style");
+    style.id = "subOffsetStyle"; // Unique ID to prevent duplicate injection
+    style.innerHTML = css;
+    document.head.appendChild(style);
 }
 
+let lastClickTime = 0;
+let hideTimeout;
+
 function add_new_btn_next_to_sub(){
+    injectCSS();
     if (document.getElementById("btnToggleOffset")){
         return;
     }
 
     const subtitles_btn = document.getElementsByClassName("btnSubtitles")[0];
-
-    console.log(subtitles_btn)
-
 
     const offsetBtnHTML = `<button id="btnToggleOffset" is="paper-icon-button-light" class="btnSubtitles autoSize paper-icon-button-light" title="Toggle Sub Offset"> 
                                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -22,8 +58,16 @@ function add_new_btn_next_to_sub(){
     subtitles_btn.insertAdjacentHTML('afterend', offsetBtnHTML);
 
     const toggle_btn = document.getElementById("btnToggleOffset");
+    const sub_sync_head = document.getElementsByClassName("subtitleSync")[0];
 
-    console.log(toggle_btn)
+    // Check if notification already exists, if not, create it
+    if (!document.querySelector('.subOffTglNotif')) {
+        const notifHTML = `
+            <div class="subOffTglNotif">
+                <div class="subOffTglNotif-content">0.0s</div>
+            </div>`;
+        sub_sync_head.insertAdjacentHTML('afterend', notifHTML);
+    }
 
     toggle_btn.addEventListener("click", function() {
         const val1 = Number({{ offset_value_1 }});
@@ -36,8 +80,12 @@ function add_new_btn_next_to_sub(){
             useUnique = true;
             singleVal = val1 === 0 ? val2 : val1;
         }
+        else if (val1 === val2){
+            useUnique = true;
+            singleVal = val1;
+        }
 
-        const offset_slider = document.getElementsByClassName("subtitleSyncSlider")[0];
+        const offset_slider = sub_sync_head.getElementsByClassName("subtitleSyncSlider")[0];
 
         const storedVal = offset_slider.value*1;
         let newVal;
@@ -62,12 +110,46 @@ function add_new_btn_next_to_sub(){
         }
         
         offset_slider.value = "" + newVal
-
         const changeEvent = new Event('change');
-        
         offset_slider.dispatchEvent(changeEvent);
+
+        // Display change of offset
+        if (sub_sync_head.querySelector(".subtitleSyncContainer").classList.contains('hide')){
+            showSubOffsetNotification(newVal);
+        }
+
+        // Reset timeout if a new click happens before the previous one hides
+        clearTimeout(hideTimeout);
+        lastClickTime = Date.now();
+
+        hideTimeout = setTimeout(() => {
+        // Only hide after the last click, if this was the most recent click
+            let notif = document.querySelector('.subOffTglNotif');
+            if (notif) {
+                notif.classList.remove('show_toggle');
+            }
+        }, 2000);
     });
 }
+
+// Function to show and fade out the notification
+function showSubOffsetNotification(offset) {
+    let notif = document.querySelector('.subOffTglNotif');
+
+    if (notif) {
+        notif.querySelector('.subOffTglNotif-content').textContent = `${offset}s`;
+        notif.classList.add('show_toggle');
+    }
+}
+
+let lastUrl = window.location.href;
+
+setInterval(() => {
+    if (window.location.href !== lastUrl) {
+        lastUrl = window.location.href;
+        checkUrlAndTrigger();
+    }
+}, 500); // Check every 500ms
 
 function checkUrlAndTrigger() {
     if (window.location.href.includes("#/video")) {
@@ -80,12 +162,3 @@ function checkUrlAndTrigger() {
         }
     }
 }
-
-let lastUrl = window.location.href;
-
-setInterval(() => {
-    if (window.location.href !== lastUrl) {
-        lastUrl = window.location.href;
-        checkUrlAndTrigger();
-    }
-}, 500); // Check every 500ms
